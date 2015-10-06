@@ -87,10 +87,6 @@ public class ModelSpawner : MonoBehaviour {
 			tex.LoadImage(texBytes);
 			mat.mainTexture = tex;
         };
-
-		        
-		
-        //if (string.IsNullOrEmpty(Thread.CurrentThread.Name)) Thread.CurrentThread.Name = "Main";
 		
 		worker.RunWorkerAsync();
         
