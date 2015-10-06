@@ -16,6 +16,7 @@ public class SlideInAndOut : MonoBehaviour {
 	private Vector3 startPos;
 	private int state = 0;
 	private Vector3 vel = Vector3.zero;
+	
 
 	void Start () {
 		startPos = transform.position;
