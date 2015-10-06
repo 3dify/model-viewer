@@ -8,8 +8,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using com.youvisio;
 
 public class ObjImporter {
+	
+	BackgroundWorker worker = new BackgroundWorker();
+	
+	public event System.Action OnComplete;
 	
 	private struct meshStruct
 	{
@@ -27,41 +32,61 @@ public class ObjImporter {
 	}
 	
 	// Use this for initialization
-	public Mesh ImportFile (string filePath) {
-		meshStruct newMesh = createMeshStruct(filePath);
-		populateMeshStruct(ref newMesh);
+	public void ImportFile (string filePath, Mesh mesh) {
 		
-		Vector3[] newVerts = new Vector3[newMesh.faceData.Length];
-		Vector2[] newUVs = new Vector2[newMesh.faceData.Length];
-		Vector3[] newNormals = new Vector3[newMesh.faceData.Length];
-		int i = 0;
-		/* The following foreach loops through the facedata and assigns the appropriate vertex, uv, or normal
-         * for the appropriate Unity mesh array.
-         */
-		foreach (Vector3 v in newMesh.faceData)            
-		{
-			newVerts[i] = newMesh.vertices[(int)v.x - 1];
-			if (v.y >= 1)
-				newUVs[i] = newMesh.uv[(int)v.y - 1];
+		meshStruct newMesh;
+		Vector3[] newVerts = new Vector3[0];
+		Vector2[] newUVs = new Vector2[0];
+		Vector3[] newNormals = new Vector3[0];
+		int[] triangles = new int[0];
+		
+		worker.DoWork += (object sender, DoWorkEventArgs e) => {
+			newMesh = createMeshStruct(filePath);
+			populateMeshStruct(ref newMesh);
 			
-			if (v.z >= 1)
-				newNormals[i] = newMesh.normals[(int)v.z - 1];
-			i++;
-		}
+			newVerts = new Vector3[newMesh.faceData.Length];
+			newUVs = new Vector2[newMesh.faceData.Length];
+			newNormals = new Vector3[newMesh.faceData.Length];
+			triangles = newMesh.triangles;
+			int i = 0;
+			/* The following foreach loops through the facedata and assigns the appropriate vertex, uv, or normal
+        	 * for the appropriate Unity mesh array.
+         	*/
+			foreach (Vector3 v in newMesh.faceData)            
+			{
+				newVerts[i] = newMesh.vertices[(int)v.x - 1];
+				if (v.y >= 1)
+					newUVs[i] = newMesh.uv[(int)v.y - 1];
+				
+				if (v.z >= 1)
+					newNormals[i] = newMesh.normals[(int)v.z - 1];
+				i++;
+			}
+		};
 		
-		Mesh mesh = new Mesh();
+		worker.RunWorkerCompleted += (sender, e) => {
+			
+			
+			//Mesh mesh = new Mesh();
+			
+			mesh.vertices = newVerts;     
+			mesh.uv = newUVs;        
+			mesh.normals = newNormals;
+			mesh.triangles = triangles;
+			
+			mesh.RecalculateBounds();
+			mesh.Optimize();
+			
+			OnComplete.Invoke();
+		};
 		
-		mesh.vertices = newVerts;     
-		mesh.uv = newUVs;        
-		mesh.normals = newNormals;
-		mesh.triangles = newMesh.triangles;
-		
-		mesh.RecalculateBounds();
-		mesh.Optimize();
-		
-		return mesh;
+		worker.RunWorkerAsync();
 	}
 	
+	public void Update(){
+		worker.Update();
+	}
+		
 	private static meshStruct createMeshStruct(string filename)
 	{
 		int triangles = 0;
